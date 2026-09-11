@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>Keylight — 공개 API 키 알림 보드</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <div class="glow glow-one" aria-hidden="true"></div>
+    <div class="glow glow-two" aria-hidden="true"></div>
+    <header class="topbar shell">
+      <a class="brand" href="/" aria-label="Keylight 홈">
+        <span class="brand-mark" aria-hidden="true">K</span>
+        <span>
+          <strong>KEYLIGHT</strong>
+          <small>LOCAL SECURITY DESK</small>
+        </span>
+      </a>
+      <div class="local-badge"><span></span> 127.0.0.1 전용</div>
+    </header>
+
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">DEFENSIVE DISCOVERY / PUBLIC REPOS</p>
+          <h1>노출을 찾고,<br><em>사람을 먼저 보호하세요.</em></h1>
+          <p class="hero-copy">
+            공개 활동이 적고 학습형 프로젝트를 만드는 초보 추정 계정의 저장소를 우선 확인합니다.
+            원문은 남기지 않고, 선정 근거와 마스킹된 식별 정보만 보관합니다.
+          </p>
+        </div>
+
+        <form id="scan-form" class="scan-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="kicker">NEW SCAN</span>
+              <h2>탐색 범위</h2>
+            </div>
+            <span id="scan-state" class="scan-state idle">대기 중</span>
+          </div>
+          <div class="form-grid">
+            <label>
+              <span>최근 업데이트</span>
+              <span class="input-wrap"><input id="recent-days" name="recent_days" type="number" value="14" min="1" max="30"><b>일</b></span>
+            </label>
+            <label>
+              <span>최대 저장소</span>
+              <span class="input-wrap"><input id="max-repositories" name="max_repositories" type="number" value="10" min="1" max="25"><b>개</b></span>
+            </label>
+          </div>
+          <button id="scan-button" class="primary-button" type="submit">
+            <span>공개 저장소 검사 시작</span><span aria-hidden="true">↗</span>
+          </button>
+          <p class="privacy-note"><span aria-hidden="true">◈</span> 키 원문 미저장 · 유효성 호출 없음 · 최대 25개</p>
+        </form>
+      </section>
+
+      <section class="metrics" aria-label="탐지 현황">
+        <article><span>확인 필요</span><strong id="metric-new">0</strong><small>NEW FINDINGS</small></article>
+        <article><span>전체 탐지</span><strong id="metric-total">0</strong><small>ALL TIME</small></article>
+        <article><span>영향 저장소</span><strong id="metric-repositories">0</strong><small>UNIQUE REPOS</small></article>
+        <article><span>알림 완료</span><strong id="metric-notified">0</strong><small>NOTIFIED</small></article>
+      </section>
+
+      <section class="activity-band" aria-live="polite">
+        <div class="activity-icon"><span></span><span></span><span></span></div>
+        <div>
+          <small>LAST SCAN</small>
+          <p id="scan-summary">아직 실행한 검사가 없습니다.</p>
+        </div>
+        <div id="scan-progress" class="scan-progress">—</div>
+      </section>
+
+      <section class="findings-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">REVIEW QUEUE</p>
+            <h2>탐지 결과</h2>
+          </div>
+          <span id="result-count" class="result-count">0건</span>
+        </div>
+
+        <div class="toolbar">
+          <label class="search-box">
+            <span aria-hidden="true">⌕</span>
+            <input id="search-input" type="search" placeholder="사용자, 저장소 또는 파일 검색">
+          </label>
+          <label class="select-label">
+            <span>제공자</span>
+            <select id="provider-filter"><option value="">전체 제공자</option></select>
+          </label>
+          <label class="select-label">
+            <span>상태</span>
+            <select id="status-filter">
+              <option value="">전체 상태</option>
+              <option value="new">확인 필요</option>
+              <option value="reviewing">검토 중</option>
+              <option value="notified">알림 완료</option>
+              <option value="resolved">해결됨</option>
+              <option value="false_positive">오탐</option>
+            </select>
+          </label>
+          <button id="refresh-button" class="icon-button" type="button" title="새로고침">↻</button>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>탐지</th>
+                <th>저장소</th>
+                <th>위치 / 증거</th>
+                <th>마지막 확인</th>
+                <th>상태</th>
+                <th><span class="sr-only">열기</span></th>
+              </tr>
+            </thead>
+            <tbody id="findings-body"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state" hidden>
+            <div aria-hidden="true">◇</div>
+            <h3>표시할 탐지가 없습니다</h3>
+            <p>검사를 실행하거나 필터를 조정해 보세요.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="shell">
+      <span>KEYLIGHT / LOCAL ONLY</span>
+      <span>저장값: 위치 · HMAC 지문 · 마스킹된 끝 4자리</span>
+    </footer>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

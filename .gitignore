@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.data/
+.env
+.pytest_cache/
+secrets/
+.env.production
+

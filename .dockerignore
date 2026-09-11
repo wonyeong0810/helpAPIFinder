@@ -1,0 +1,14 @@
+.git
+.gitignore
+.data
+.env
+.env.*
+!.env.production.example
+secrets
+__pycache__
+*.py[cod]
+.pytest_cache
+tests
+*.db
+*.sqlite*
+
