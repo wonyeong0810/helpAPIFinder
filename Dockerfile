@@ -3,7 +3,10 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     FINDER_HOST=0.0.0.0 \
-    FINDER_DB_PATH=/data/findings.db
+    FINDER_DB_PATH=/data/findings.db \
+    FINDER_SCAN_INTERVAL_MINUTES=15 \
+    FINDER_RECENT_DAYS=7 \
+    FINDER_MAX_REPOSITORIES=10
 
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes gosu \

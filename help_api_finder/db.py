@@ -102,6 +102,13 @@ class Database:
                     error_message TEXT
                 );
 
+                CREATE TABLE IF NOT EXISTS processed_owners (
+                    owner TEXT PRIMARY KEY COLLATE NOCASE,
+                    processed_at TEXT NOT NULL,
+                    finding_detected INTEGER NOT NULL DEFAULT 0
+                        CHECK (finding_detected IN (0, 1))
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_findings_status ON findings(status);
                 CREATE INDEX IF NOT EXISTS idx_findings_provider ON findings(provider);
                 CREATE INDEX IF NOT EXISTS idx_findings_last_seen ON findings(last_seen_at DESC);
@@ -199,6 +206,38 @@ class Database:
                 (*data.values(), now, now),
             )
             return cursor.rowcount == 1 and connection.execute("SELECT changes()").fetchone()[0] == 1 and self._was_just_inserted(connection, data, now)
+
+    def processed_owners(self) -> set[str]:
+        """Return accounts that should not be scanned again.
+
+        Owners already present in findings are included for databases created
+        before the processed-owner table existed.
+        """
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT owner FROM processed_owners
+                UNION
+                SELECT owner FROM findings
+                """
+            ).fetchall()
+            return {str(row["owner"]).casefold() for row in rows if row["owner"]}
+
+    def mark_owner_processed(self, owner: str, *, finding_detected: bool) -> None:
+        owner = owner.strip()
+        if not owner or len(owner) > 100:
+            raise ValueError("invalid owner")
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO processed_owners(owner, processed_at, finding_detected)
+                VALUES (?, ?, ?)
+                ON CONFLICT(owner) DO UPDATE SET
+                    finding_detected = MAX(processed_owners.finding_detected,
+                                           excluded.finding_detected)
+                """,
+                (owner, utc_now(), int(finding_detected)),
+            )
 
     @staticmethod
     def _was_just_inserted(connection: sqlite3.Connection, data: dict[str, Any], now: str) -> bool:

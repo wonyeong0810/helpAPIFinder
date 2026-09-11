@@ -21,7 +21,7 @@ python app.py
 
 ## 개인 서버 운영
 
-장기 실행은 표준 라이브러리 개발 서버 대신 Gunicorn, Caddy HTTPS, 관리자 인증, Docker secret, 영구 볼륨을 사용하는 Compose 구성을 제공합니다. 기본적으로 6시간마다 자동 검사를 시작합니다.
+장기 실행은 표준 라이브러리 개발 서버 대신 Gunicorn, Caddy HTTPS, 관리자 인증, Docker secret, 영구 볼륨을 사용하는 Compose 구성을 제공합니다. Docker 배포는 기본적으로 15분마다 자동 검사를 시작하며, 이미 검사한 계정은 다시 검사하지 않습니다.
 
 배포 및 secret 생성 절차는 [DEPLOYMENT.md](DEPLOYMENT.md)를 따르세요. 앱 컨테이너의 `8765` 포트를 인터넷에 직접 공개하면 안 됩니다.
 

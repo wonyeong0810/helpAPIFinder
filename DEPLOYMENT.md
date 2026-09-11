@@ -26,7 +26,7 @@ KEYLIGHT_PUBLIC_ORIGIN=https://keys.example.com
 KEYLIGHT_ADMIN_USERNAME=admin
 ```
 
-자동 검사 기본값은 6시간 간격, 최근 7일 내 푸시된 후보 중 최대 10개입니다. `FINDER_SCAN_INTERVAL_MINUTES`는 최소 5분이지만, GitHub 요청 제한과 트래픽을 고려해 60분 이상을 권장합니다.
+자동 검사 기본값은 15분 간격, 최근 7일 내 푸시된 후보 중 최대 10개입니다. 검사한 계정은 DB에 기록되어 이후 검사에서 건너뜁니다. `FINDER_SCAN_INTERVAL_MINUTES`는 최소 5분이며, 검사량을 줄이려면 간격을 늘리세요.
 
 ## 3. Secret 파일 생성
 
@@ -89,4 +89,3 @@ docker compose down
 ```
 
 `docker compose down -v`는 탐지 DB와 인증서 볼륨까지 삭제하므로 사용하지 마세요.
-

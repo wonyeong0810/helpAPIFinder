@@ -24,7 +24,7 @@ Dockerfile은 컨테이너 내부의 `0.0.0.0:${PORT}`에 Gunicorn을 바인딩�
 PORT=8080
 FINDER_HOST=0.0.0.0
 FINDER_DB_PATH=/data/findings.db
-FINDER_SCAN_INTERVAL_MINUTES=360
+FINDER_SCAN_INTERVAL_MINUTES=15
 FINDER_RECENT_DAYS=7
 FINDER_MAX_REPOSITORIES=10
 KEYLIGHT_REQUIRE_AUTH=1
@@ -54,5 +54,8 @@ Tailscale로만 접속하고 고정 도메인이 없다면 `KEYLIGHT_ALLOWED_HOS
 2. 루트 주소에서 브라우저의 관리자 인증 창이 뜨는지 확인합니다.
 3. 로그인 후 `LAST SCAN` 영역에서 자동 검사가 시작됐는지 확인합니다.
 4. 패널 로그에 GitHub 토큰이나 탐지된 키 원문이 출력되지 않는지 확인합니다.
+
+자동 검사는 앱 시작 직후 실행되고 이후 설정된 간격으로 반복됩니다. 한 번 검사한
+GitHub 계정은 DB에 기록되어 다음 자동 검사부터 건너뜁니다.
 
 앱 포트를 별도로 공인 IP에 노출하지 말고 패널의 Caddy 또는 Tailscale을 통해서만 접근합니다.

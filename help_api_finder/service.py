@@ -120,6 +120,7 @@ class ScanManager:
             counts["repositories_discovered"] = len(repositories)
             self.database.update_scan(scan_id, **counts)
             owner_cache: dict[str, dict[str, Any]] = {}
+            processed_owners = self.database.processed_owners()
 
             for repository in repositories:
                 if counts["repositories_scanned"] >= config.max_repositories:
@@ -131,6 +132,9 @@ class ScanManager:
                     continue
                 login = str(owner_data.get("login", ""))
                 if not login:
+                    continue
+                owner_key = login.casefold()
+                if owner_key in processed_owners:
                     continue
                 user = owner_cache.get(login)
                 if user is None:
@@ -144,6 +148,7 @@ class ScanManager:
                 default_branch = str(repository.get("default_branch") or "main")
                 counts["repositories_eligible"] += 1
                 commit_sha = client.get_commit_sha(full_name, default_branch)
+                owner_has_finding = False
                 for file_path, text in client.iter_archive_files(
                     full_name,
                     commit_sha,
@@ -151,6 +156,7 @@ class ScanManager:
                 ):
                     counts["files_scanned"] += 1
                     for detection in scan_text(text, self.fingerprint_key):
+                        owner_has_finding = True
                         counts["findings_total"] += 1
                         file_url = _file_url(full_name, commit_sha, file_path, detection.line_number)
                         finding = FindingInput(
@@ -174,6 +180,11 @@ class ScanManager:
                         if self.database.upsert_finding(finding):
                             counts["findings_new"] += 1
                 counts["repositories_scanned"] += 1
+                self.database.mark_owner_processed(
+                    login,
+                    finding_detected=owner_has_finding,
+                )
+                processed_owners.add(owner_key)
                 self.database.update_scan(
                     scan_id,
                     **counts,

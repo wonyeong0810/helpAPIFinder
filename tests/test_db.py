@@ -82,6 +82,22 @@ class DatabaseTests(unittest.TestCase):
         self.assertEqual(scan["status"], "failed")
         self.assertIn("재시작", scan["error_message"])
 
+    def test_processed_owners_are_persistent_and_case_insensitive(self):
+        self.db.mark_owner_processed("New-User", finding_detected=False)
+        self.db.mark_owner_processed("new-user", finding_detected=True)
+
+        self.assertEqual(self.db.processed_owners(), {"new-user"})
+        with self.db.connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS count, finding_detected FROM processed_owners"
+            ).fetchone()
+        self.assertEqual(row["count"], 1)
+        self.assertEqual(row["finding_detected"], 1)
+
+    def test_existing_finding_owner_is_treated_as_processed(self):
+        self.db.upsert_finding(sample_finding())
+        self.assertIn("new-user", self.db.processed_owners())
+
 
 if __name__ == "__main__":
     unittest.main()
