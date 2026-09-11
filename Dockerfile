@@ -1,21 +1,24 @@
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    FINDER_DB_PATH=/data/findings.db
 
 RUN groupadd --system keylight \
     && useradd --system --gid keylight --home-dir /app keylight
 
 WORKDIR /app
 
-COPY requirements.txt ./
+COPY --chown=keylight:keylight --chmod=0644 requirements.txt ./
 RUN pip install --no-cache-dir --requirement requirements.txt
 
-COPY app.py ./
-COPY help_api_finder ./help_api_finder
-COPY static ./static
+COPY --chown=keylight:keylight --chmod=0644 app.py ./
+COPY --chown=keylight:keylight help_api_finder ./help_api_finder
+COPY --chown=keylight:keylight static ./static
 
-RUN mkdir -p /data && chown keylight:keylight /data
+RUN mkdir -p /data \
+    && chown keylight:keylight /data \
+    && chmod -R u=rwX,go=rX /app
 
 USER keylight
 EXPOSE 8080
