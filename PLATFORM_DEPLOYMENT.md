@@ -14,7 +14,7 @@
 | 하위 폴더 | **비워 두기** |
 | 컨테이너 내부 포트 | `8080` |
 
-Dockerfile은 기본적으로 `127.0.0.1:${PORT}`에 Gunicorn을 바인딩합니다. 패널이 `PORT=8080`을 자동 주입하지 않으면 아래 환경변수에도 직접 추가합니다.
+Dockerfile은 컨테이너 내부의 `0.0.0.0:${PORT}`에 Gunicorn을 바인딩합니다. 패널은 호스트 쪽 포트를 `127.0.0.1`에만 공개하고 Caddy가 그 포트로 프록시해야 합니다. 패널이 `PORT=8080`을 자동 주입하지 않으면 아래 환경변수에도 직접 추가합니다.
 
 ## 환경변수
 
@@ -22,7 +22,7 @@ Dockerfile은 기본적으로 `127.0.0.1:${PORT}`에 Gunicorn을 바인딩합니
 
 ```dotenv
 PORT=8080
-FINDER_HOST=127.0.0.1
+FINDER_HOST=0.0.0.0
 FINDER_DB_PATH=/data/findings.db
 FINDER_SCAN_INTERVAL_MINUTES=360
 FINDER_RECENT_DAYS=7
@@ -56,4 +56,3 @@ Tailscale로만 접속하고 고정 도메인이 없다면 `KEYLIGHT_ALLOWED_HOS
 4. 패널 로그에 GitHub 토큰이나 탐지된 키 원문이 출력되지 않는지 확인합니다.
 
 앱 포트를 별도로 공인 IP에 노출하지 말고 패널의 Caddy 또는 Tailscale을 통해서만 접근합니다.
-
