@@ -26,7 +26,7 @@ KEYLIGHT_PUBLIC_ORIGIN=https://keys.example.com
 KEYLIGHT_ADMIN_USERNAME=admin
 ```
 
-자동 검사 기본값은 15분 간격, 최근 7일 내 푸시된 후보 중 최대 10개입니다. 검사한 계정은 DB에 기록되어 이후 검사에서 건너뜁니다. `FINDER_SCAN_INTERVAL_MINUTES`는 최소 5분이며, 검사량을 줄이려면 간격을 늘리세요.
+자동 검사 기본값은 15분 간격, 최근 7일 내 푸시된 후보 중 최대 10개입니다. 검사한 저장소는 DB에 기록되어 이후 검사에서 건너뜁니다. 키가 없었던 계정에 새 저장소가 생기면 그 저장소는 검사하고, 키가 발견된 계정은 이후 완전히 제외합니다. `FINDER_SCAN_INTERVAL_MINUTES`는 최소 5분이며, 검사량을 줄이려면 간격을 늘리세요.
 
 ## 3. Secret 파일 생성
 

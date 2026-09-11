@@ -120,7 +120,8 @@ class ScanManager:
             counts["repositories_discovered"] = len(repositories)
             self.database.update_scan(scan_id, **counts)
             owner_cache: dict[str, dict[str, Any]] = {}
-            processed_owners = self.database.processed_owners()
+            owners_with_findings = self.database.owners_with_findings()
+            processed_repositories = self.database.processed_repositories()
 
             for repository in repositories:
                 if counts["repositories_scanned"] >= config.max_repositories:
@@ -134,7 +135,10 @@ class ScanManager:
                 if not login:
                     continue
                 owner_key = login.casefold()
-                if owner_key in processed_owners:
+                if owner_key in owners_with_findings:
+                    continue
+                full_name = str(repository.get("full_name", ""))
+                if not full_name or full_name.casefold() in processed_repositories:
                     continue
                 user = owner_cache.get(login)
                 if user is None:
@@ -144,7 +148,6 @@ class ScanManager:
                 if beginner_score < config.minimum_beginner_score:
                     continue
 
-                full_name = str(repository.get("full_name", ""))
                 default_branch = str(repository.get("default_branch") or "main")
                 counts["repositories_eligible"] += 1
                 commit_sha = client.get_commit_sha(full_name, default_branch)
@@ -180,11 +183,14 @@ class ScanManager:
                         if self.database.upsert_finding(finding):
                             counts["findings_new"] += 1
                 counts["repositories_scanned"] += 1
-                self.database.mark_owner_processed(
+                self.database.mark_repository_processed(
+                    full_name,
                     login,
                     finding_detected=owner_has_finding,
                 )
-                processed_owners.add(owner_key)
+                processed_repositories.add(full_name.casefold())
+                if owner_has_finding:
+                    owners_with_findings.add(owner_key)
                 self.database.update_scan(
                     scan_id,
                     **counts,

@@ -97,6 +97,23 @@ class DatabaseTests(unittest.TestCase):
     def test_existing_finding_owner_is_treated_as_processed(self):
         self.db.upsert_finding(sample_finding())
         self.assertIn("new-user", self.db.processed_owners())
+        self.assertIn("new-user", self.db.owners_with_findings())
+
+    def test_repository_history_allows_new_repo_until_finding(self):
+        self.db.mark_repository_processed(
+            "New-User/First-Repo",
+            "New-User",
+            finding_detected=False,
+        )
+        self.assertEqual(self.db.processed_repositories(), {"new-user/first-repo"})
+        self.assertNotIn("new-user", self.db.owners_with_findings())
+
+        self.db.mark_repository_processed(
+            "new-user/second-repo",
+            "new-user",
+            finding_detected=True,
+        )
+        self.assertIn("new-user", self.db.owners_with_findings())
 
 
 if __name__ == "__main__":

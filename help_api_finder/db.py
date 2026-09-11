@@ -109,9 +109,19 @@ class Database:
                         CHECK (finding_detected IN (0, 1))
                 );
 
+                CREATE TABLE IF NOT EXISTS processed_repositories (
+                    repository TEXT PRIMARY KEY COLLATE NOCASE,
+                    owner TEXT NOT NULL COLLATE NOCASE,
+                    processed_at TEXT NOT NULL,
+                    finding_detected INTEGER NOT NULL DEFAULT 0
+                        CHECK (finding_detected IN (0, 1))
+                );
+
                 CREATE INDEX IF NOT EXISTS idx_findings_status ON findings(status);
                 CREATE INDEX IF NOT EXISTS idx_findings_provider ON findings(provider);
                 CREATE INDEX IF NOT EXISTS idx_findings_last_seen ON findings(last_seen_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_processed_repositories_owner
+                    ON processed_repositories(owner);
                 """
             )
             self._migrate_findings(connection)
@@ -208,7 +218,7 @@ class Database:
             return cursor.rowcount == 1 and connection.execute("SELECT changes()").fetchone()[0] == 1 and self._was_just_inserted(connection, data, now)
 
     def processed_owners(self) -> set[str]:
-        """Return accounts that should not be scanned again.
+        """Return accounts for which at least one repository was processed.
 
         Owners already present in findings are included for databases created
         before the processed-owner table existed.
@@ -222,6 +232,29 @@ class Database:
                 """
             ).fetchall()
             return {str(row["owner"]).casefold() for row in rows if row["owner"]}
+
+    def owners_with_findings(self) -> set[str]:
+        """Return accounts that must be skipped even when they add repositories."""
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT owner FROM processed_owners WHERE finding_detected = 1
+                UNION
+                SELECT owner FROM findings
+                """
+            ).fetchall()
+            return {str(row["owner"]).casefold() for row in rows if row["owner"]}
+
+    def processed_repositories(self) -> set[str]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT repository FROM processed_repositories"
+            ).fetchall()
+            return {
+                str(row["repository"]).casefold()
+                for row in rows
+                if row["repository"]
+            }
 
     def mark_owner_processed(self, owner: str, *, finding_detected: bool) -> None:
         owner = owner.strip()
@@ -237,6 +270,43 @@ class Database:
                                            excluded.finding_detected)
                 """,
                 (owner, utc_now(), int(finding_detected)),
+            )
+
+    def mark_repository_processed(
+        self,
+        repository: str,
+        owner: str,
+        *,
+        finding_detected: bool,
+    ) -> None:
+        repository = repository.strip()
+        owner = owner.strip()
+        if not repository or len(repository) > 200 or "/" not in repository:
+            raise ValueError("invalid repository")
+        if not owner or len(owner) > 100:
+            raise ValueError("invalid owner")
+        now = utc_now()
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO processed_repositories(
+                    repository, owner, processed_at, finding_detected
+                ) VALUES (?, ?, ?, ?)
+                ON CONFLICT(repository) DO UPDATE SET
+                    finding_detected = MAX(processed_repositories.finding_detected,
+                                           excluded.finding_detected)
+                """,
+                (repository, owner, now, int(finding_detected)),
+            )
+            connection.execute(
+                """
+                INSERT INTO processed_owners(owner, processed_at, finding_detected)
+                VALUES (?, ?, ?)
+                ON CONFLICT(owner) DO UPDATE SET
+                    finding_detected = MAX(processed_owners.finding_detected,
+                                           excluded.finding_detected)
+                """,
+                (owner, now, int(finding_detected)),
             )
 
     @staticmethod
