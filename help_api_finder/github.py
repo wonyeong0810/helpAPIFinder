@@ -20,7 +20,9 @@ MAX_FILE_BYTES = 512 * 1024
 
 
 class GitHubError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class GitHubClient:
@@ -53,7 +55,7 @@ class GitHubClient:
         except urllib.error.HTTPError as error:
             self._capture_rate(error.headers)
             message = _safe_api_error(error)
-            raise GitHubError(message) from None
+            raise GitHubError(message, status_code=error.code) from None
         except urllib.error.URLError as error:
             raise GitHubError(f"GitHub 연결 실패: {error.reason}") from None
         except (TimeoutError, json.JSONDecodeError):
@@ -105,7 +107,10 @@ class GitHubClient:
             with urllib.request.urlopen(request, timeout=45) as response:
                 archive = _bounded_read(response, MAX_ARCHIVE_BYTES)
         except urllib.error.HTTPError as error:
-            raise GitHubError(f"공개 저장소 아카이브를 읽지 못했습니다 (HTTP {error.code}).") from None
+            raise GitHubError(
+                f"공개 저장소 아카이브를 읽지 못했습니다 (HTTP {error.code}).",
+                status_code=error.code,
+            ) from None
         except urllib.error.URLError as error:
             raise GitHubError(f"저장소 다운로드 실패: {error.reason}") from None
 

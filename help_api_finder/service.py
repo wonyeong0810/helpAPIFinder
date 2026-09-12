@@ -150,38 +150,64 @@ class ScanManager:
 
                 default_branch = str(repository.get("default_branch") or "main")
                 counts["repositories_eligible"] += 1
-                commit_sha = client.get_commit_sha(full_name, default_branch)
-                owner_has_finding = False
-                for file_path, text in client.iter_archive_files(
-                    full_name,
-                    commit_sha,
-                    max_files=config.max_files_per_repository,
-                ):
-                    counts["files_scanned"] += 1
-                    for detection in scan_text(text, self.fingerprint_key):
-                        owner_has_finding = True
-                        counts["findings_total"] += 1
-                        file_url = _file_url(full_name, commit_sha, file_path, detection.line_number)
-                        finding = FindingInput(
-                            provider=detection.provider,
-                            label=detection.label,
-                            fingerprint=detection.fingerprint,
-                            masked_secret=detection.masked_secret,
-                            repository=full_name,
-                            owner=login,
-                            repo_url=str(repository.get("html_url", f"https://github.com/{full_name}")),
-                            owner_url=str(owner_data.get("html_url", f"https://github.com/{login}")),
-                            beginner_score=beginner_score,
-                            beginner_signals=json.dumps(beginner_signals, ensure_ascii=False),
-                            file_path=file_path,
-                            file_url=file_url,
-                            line_number=detection.line_number,
-                            commit_sha=commit_sha,
-                            evidence=detection.evidence,
-                            confidence=detection.confidence,
-                        )
-                        if self.database.upsert_finding(finding):
-                            counts["findings_new"] += 1
+                try:
+                    commit_sha = client.get_commit_sha(full_name, default_branch)
+                    owner_has_finding = False
+                    for file_path, text in client.iter_archive_files(
+                        full_name,
+                        commit_sha,
+                        max_files=config.max_files_per_repository,
+                    ):
+                        counts["files_scanned"] += 1
+                        for detection in scan_text(text, self.fingerprint_key):
+                            owner_has_finding = True
+                            counts["findings_total"] += 1
+                            file_url = _file_url(
+                                full_name,
+                                commit_sha,
+                                file_path,
+                                detection.line_number,
+                            )
+                            finding = FindingInput(
+                                provider=detection.provider,
+                                label=detection.label,
+                                fingerprint=detection.fingerprint,
+                                masked_secret=detection.masked_secret,
+                                repository=full_name,
+                                owner=login,
+                                repo_url=str(
+                                    repository.get(
+                                        "html_url",
+                                        f"https://github.com/{full_name}",
+                                    )
+                                ),
+                                owner_url=str(
+                                    owner_data.get(
+                                        "html_url",
+                                        f"https://github.com/{login}",
+                                    )
+                                ),
+                                beginner_score=beginner_score,
+                                beginner_signals=json.dumps(
+                                    beginner_signals,
+                                    ensure_ascii=False,
+                                ),
+                                file_path=file_path,
+                                file_url=file_url,
+                                line_number=detection.line_number,
+                                commit_sha=commit_sha,
+                                evidence=detection.evidence,
+                                confidence=detection.confidence,
+                            )
+                            if self.database.upsert_finding(finding):
+                                counts["findings_new"] += 1
+                except GitHubError as error:
+                    # Empty, deleted, or concurrently changed repositories are
+                    # normal search races. Leave them unprocessed so a later
+                    # scan can retry if they become available.
+                    if error.status_code in {404, 409, 422}:
+                        continue
+                    raise
                 counts["repositories_scanned"] += 1
                 self.database.mark_repository_processed(
                     full_name,
